@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<head>
+  <title>Alternate World Run - Final Project</title>
+  <script src="three.min.js">
+  </script>
+  <script src="GLTFLoader.js">
+  </script>
+  <script src="KeyboardState.js">
+    /*
+     * Name:  Eleni Partakki
+     * Reflections on this project: I definitely learned a lot, and challenged
+     * myself. There are many things I would want to improve in order for this
+     * to be a game that someone could enjoy playing.
+     * It works well and has a lot of potential.
+     *
+     * 
+     * 
+     * Inspiration: https://play.google.com/store/apps/details?id=com.imangi.templerun&hl=en_US&gl=US
+     * Code ideas: 1. https://www.youtube.com/watch?v=KJ38qCwFdy8&ab_channel=SimonDev
+     *              2.  https://threejs.org/docs/#api/en/extras/core/Shape
+     *               
+     */     
+  </script>
+
+
+
+  <script>
+    var debug = true; // If true print debugging info
+    var farCamera = false; // if true zoom the camera way out to view the whole scene
+
+    var scene, camera, renderer; // Three.js rendering basics.
+
+    var keyboard = new KeyboardState(); //tracks when keys are pressed
+
+    var canvas; // The canvas on which the image is rendered.
+
+    //intialize world objects
+    var floor;
+    var player;
+
+    //set size variables
+    var floorWidth = 15;
+    var floorSegments = 50;
+    var playerRadius = .55;
+    var floorLength = floorSegments * 2; //the number of rows where obstacles can be placed on each floor
+
+
+    //set other world variables
+    var speed = .15; //speed of the player moving forward along the y axis
+
+    //initialize geometries and materials
+    var tGeom;
+    var tMat;
+
+    //initialize floor lanes
+    var floorGrid = new Array(floorSegments);
+    var floorObjects = new Array(floorSegments);
+    for (var i = 0; i < floorSegments; i += 1) {
+      floorGrid[i] = new Array(6);
+      floorObjects[i] = new Array(6);
+    };
+
+    //initialize other variables
+    var distance = 0; //how far the player has traveled
+    var level = 1; // the level the player is on
+
+
+    // create world basics
+    function createWorld() {
+      renderer.setClearColor(0xA2C4C9, 0.9); // Set background color
+
+      scene = new THREE.Scene(); // Create a new scene which we can add objects to.
+
+      // create a camera, sitting on the positive z-axis.  The camera is not part of the scene.
+      camera = new THREE.PerspectiveCamera(55, 2, .2, 1000);
+      camera.position.x += floorWidth / 2;
+      camera.position.y -= playerRadius * 4; //floorWidth/2;
+      camera.position.z += playerRadius * 2.5;
+
+      if (farCamera) {
+        camera.position.z = 60;
+      }
+
+
+      // create main light, shines up from the camera to the right
+      var light1 = new THREE.DirectionalLight(0xF6C18B, .4);
+      light1.position.set(3, -2, 5);
+      scene.add(light1);
+
+      // create secondary light for anything the first one does not hit, shines approximately in the opposite direction but offset slightly and without shining up or down the z axis
+      var light2 = new THREE.AmbientLight(0xC18BF6, .6);
+      scene.add(light2);
+
+      //https://threejs.org/docs/#api/en/geometries/TorusKnotGeometry
+      const geom = new THREE.TorusKnotGeometry(50, 2, 50);
+      const material = new THREE.MeshBasicMaterial({ color: 0xC27BA0, side: THREE.DoubleSide });
+      const plane = new THREE.Mesh(geom, material);
+      scene.add(plane);
+
+      //https://threejs.org/docs/#api/en/geometries/RingGeometry
+      const geom2 = new THREE.RingGeometry(100, 1000, 100);
+      const material2 = new THREE.MeshBasicMaterial({ color: 0x351C75, side: THREE.DoubleSide });
+      const plane2 = new THREE.Mesh(geom2, material2);
+      scene.add(plane2);
+
+
+      //create floor
+      var floorGeom = new THREE.PlaneGeometry(floorWidth / 6, floorLength);
+
+      var floorMat1 = new THREE.MeshLambertMaterial({ color: 0x000000 });
+      floor1 = new THREE.Mesh(floorGeom, floorMat1);
+      floor1.position.x = floorWidth / 12;
+      floor1.position.y = floorLength / 2;
+      scene.add(floor1);
+
+      var floorMat2 = new THREE.MeshLambertMaterial({ color: 0x7BC2C0 })
+      floor2 = new THREE.Mesh(floorGeom, floorMat2);
+      floor2.position.x = floorWidth / 4;
+      floor2.position.y = floorLength / 2;
+      scene.add(floor2);
+
+      var floorMat3 = new THREE.MeshLambertMaterial({ color: 0x000000 })
+      floor3 = new THREE.Mesh(floorGeom, floorMat3);
+      floor3.position.x = floorWidth * 5 / 12;
+      floor3.position.y = floorLength / 2;
+      scene.add(floor3);
+
+      var floorMat4 = new THREE.MeshLambertMaterial({ color: 0x7BC2C0 })
+      floor4 = new THREE.Mesh(floorGeom, floorMat4);
+      floor4.position.x = floorWidth * 7 / 12;
+      floor4.position.y = floorLength / 2;
+      scene.add(floor4);
+
+      var floorMat5 = new THREE.MeshLambertMaterial({ color: 0x000000 })
+      floor5 = new THREE.Mesh(floorGeom, floorMat5);
+      floor5.position.x = floorWidth * 3 / 4;
+      floor5.position.y = floorLength / 2;
+      scene.add(floor5);
+
+      var floorMat6 = new THREE.MeshLambertMaterial({ color: 0x7BC2C0 })
+      floor6 = new THREE.Mesh(floorGeom, floorMat6);
+      floor6.position.x = floorWidth * 11 / 12;
+      floor6.position.y = floorLength / 2;
+      scene.add(floor6);
+
+      //create player
+      var playerGeom = new THREE.SphereGeometry(playerRadius, 15, 15);
+      var playerMat = new THREE.MeshLambertMaterial({ color: 0xC27BA0 });
+      player = new THREE.Mesh(playerGeom, playerMat);
+      player.position.x += floorWidth / 2.5;
+      player.position.y += playerRadius;
+      player.position.z += playerRadius
+      scene.add(player);
+
+      //make camera look at player
+      camera.lookAt(floorWidth / 2, playerRadius, player.position.z);
+
+
+      tGeom = new THREE.SphereGeometry(2, 5, 3);
+
+      var loader = new THREE.TextureLoader();
+
+
+      var rockTexture = loader.load("rock.jpeg");
+      var rockMaterial = new THREE.MeshPhongMaterial({ map: rockTexture });
+
+
+      shape = new THREE.Mesh(tGeom, rockMaterial);
+      shape.position.z = -25;
+      scene.add(shape);
+
+
+      tMat = new THREE.MeshLambertMaterial({ color: 0xFCE5CD });
+    }
+
+
+
+    function level1() {
+
+      //required for being able to navigate and collision
+      floorGrid = [
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 0],
+        [0, 1, 1, 0, 0, 0],
+        [0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 0, 0],
+        [1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [1, 0, 1, 1, 0, 0],
+        [0, 0, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 1],
+        [0, 1, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 1],
+        [0, 1, 1, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1],
+        [0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1, 1],
+        [1, 0, 0, 0, 0, 1],
+        [0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1, 1],
+        [0, 1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 0, 0],
+        [0, 1, 0, 1, 0, 0],
+        [0, 1, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [1, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1],
+        [0, 0, 1, 0, 0, 1],
+        [0, 1, 0, 0, 0, 1],
+        [0, 1, 0, 0, 1, 0],
+        [0, 1, 0, 0, 1, 0],
+        [0, 1, 0, 0, 0, 0],
+      ];
+
+
+      for (var i = 0; i < floorSegments; i++) {
+        for (var j = 0; j < 6; j++) {
+          if (floorGrid[i][j] == 1) {
+
+            floorObjects[i][j] = new THREE.Mesh(tGeom, tMat);
+
+            floorObjects[i][j].position.y = i * 3;
+            floorObjects[i][j].position.x = j * 2 + 1;
+            floorObjects[i][j].position.z = 1;
+
+            scene.add(floorObjects[i][j]);
+          }
+        }
+      }
+
+
+    }
+
+
+    // when the player loses = end the game
+    function endGame() {
+      var endGeom = new THREE.BoxGeometry(20, 50, 20);
+      var endMat = new THREE.MeshLambertMaterial({ color: 0xC27BA0 });
+      var endShape = new THREE.Mesh(endGeom, endMat);
+      endShape.position.y = player.position.y
+
+      player.position.y = -20;
+      camera.position.y = -22;
+    }
+
+    // returns the object in the position requested
+    function getSpace(x, y) {
+      if (x < 0 || x > 12 || y < 0 || y > floorSegments * 2) {
+        return null;
+      }
+      var gridY = Math.floor(x / 2)
+      var gridX = Math.floor(y / 2)
+      if (debug) {
+        console.log(gridX, gridY);
+      }
+      return floorGrid[gridX][gridY];
+    }
+
+    // update scene - handle movement and progress
+    function update() {
+
+      // move player and camera forward
+      player.position.y += speed;
+      camera.position.y += speed;
+
+      if (player.position.z > playerRadius) {
+        player.position.z -= speed;
+        camera.position.z -= speed;
+      }
+
+      keyboard.update();
+
+      // move camera and runner in correct direction
+      if (keyboard.pressed("left")) {
+        if (player.position.x > 0) {
+          player.position.x -= speed;
+          camera.position.x -= speed;
+        }
+      }
+      if (keyboard.pressed("right")) {
+        if (player.position.x < floorWidth) {
+          player.position.x += speed;
+          camera.position.x += speed;
+        }
+      }
+
+
+      if (getSpace(player.position.x - playerRadius, player.position.y + playerRadius) == 1 || getSpace(player.position.x + playerRadius, player.position.y + playerRadius) == 1) {
+        endGame();
+      }
+
+      if (player.position.y > floorSegments * 2) {
+        player.position.z += 15;
+        camera.position.z += 15;
+
+        player.position.y = -15;
+        camera.position.y = -15;
+      }
+
+      //if player collides with an obstacle end the game
+    }
+
+    //render the scene
+    function render() {
+      update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(render);
+    }
+
+    // The init() function is called by the onload event when the document has loaded.
+    function init() {
+      try {
+        canvas = document.getElementById("glcanvas");
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+      }
+      catch (e) {
+        document.getElementById("canvas-holder").innerHTML = "<h3><b>WebGL is not available.</b><h3>";
+        return;
+      }
+
+      createWorld();
+      level1();
+      render();
+    }
+  </script>
+
+</head>
+
+<body onload="init()">
+  <div id="canvas-holder">
+    <canvas id="glcanvas" width="600" height="600"></canvas>
+  </div>
+</body>
+
+</html>
