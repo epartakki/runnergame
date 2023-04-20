@@ -2,7 +2,7 @@
 
 
 A prototype game.
-__________
+
 
 ## Instructions
 
