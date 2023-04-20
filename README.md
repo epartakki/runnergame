@@ -1,11 +1,10 @@
-# Runner
+# Alternate World Run
 
-Spring 2021
 
-A prototype game made for Computer Graphics.
+A prototype game.
 __________
 
-Alternate World Run - Final Project (May 2021)
+## Instructions
 
 - Use the right and left keyboard keys to move the runner. 
 
